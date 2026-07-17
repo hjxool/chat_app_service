@@ -44,7 +44,7 @@ func main() {
 		protected.GET("profile", profileHandler)
 	}
 	fmt.Println("服务运行在8080端口...")
-	r.Run("8080")
+	r.Run(":8080") // 监听本地所有IP 冒号:不能省略
 }
 
 // 统一返回的响应体
@@ -52,7 +52,7 @@ type Response[T any] struct {
 	Head struct { // 匿名结构体
 		Code    int    `json:"code"`
 		Message string `json:"message"`
-	}
+	} `json:"head"`
 	Body T `json:"body"`
 }
 
