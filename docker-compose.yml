@@ -1,0 +1,35 @@
+services:
+  mysql-user:
+    # 可以不写版本号 会拉取最新稳定版 但建议明确写版本号，避免未来更新导致不兼容 
+    image: mysql:8.0
+    container_name: mysql-user
+    environment:
+      # 设置 MySQL root 用户的初始密码
+      MYSQL_ROOT_PASSWORD: rootpassword
+      # 容器启动时自动创建一个指定名字的数据库
+      # 只能指定一个库 如果要初始化多个库(按微服务分库) 通过挂载初始化 SQL 脚本
+      MYSQL_DATABASE: user_db
+    ports:
+      - "3306:3306"
+    volumes:
+      # 命名卷不是容器内部的空间，而是由 Docker 在宿主机上管理的一块持久化存储区域
+      # 如容器里看到的是 /var/lib/mysql 目录 实际数据会存放在宿主机的 Docker 数据目录（通常在 /var/lib/docker/volumes/mysql_data/_data）
+      # 如果是./data:/var/lib/mysql这种写法 表示把宿主机当前目录下的 ./data 映射到容器里的 /var/lib/mysql
+      # 把一个 命名卷（mysql_data）挂载到容器里的 /var/lib/mysql 目录
+      - mysql_user_data:/var/lib/mysql
+      # 把本地的 init.sql 文件挂载到容器内部的指定目录 容器启动时会自动执行 /docker-entrypoint-initdb.d/ 目录下的所有 .sql 或 .sh 文件
+      # - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+  redis:
+    # alpine 轻量版镜像 Docker Hub 的 Redis 页面可以查看所有 tag
+    image: redis:7.0-alpine
+    container_name: redis-service
+    ports:
+      - "6379:6379"
+    # 这是挂载声明
+    volumes:
+      - redis_data:/data
+
+# 这是全局卷定义
+volumes:
+  mysql_user_data:
+  redis_data:
