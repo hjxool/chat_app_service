@@ -3,14 +3,33 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
+	"user_service/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"go.uber.org/zap"
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
-var jwtSecret = []byte("go_secret_key")
+var (
+	jwtSecret = []byte("go_secret_key")
+	db        *gorm.DB
+)
+
+// User 数据库实体模型
+type User struct {
+	// 数据库里 BIGINT 对应go中的int64 而叠加 UNSIGNED 无符号则变成 uint64 无符号整数类型
+	ID        uint64    `gorm:"primaryKey" json:"id"`
+	Username  string    `gorm:"uniqueIndex;type:varchar(64);not null" json:"username"`
+	Password  string    `gorm:"type:varchar(255);not null" json:"-"` // 密码 json 输出时忽略
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
 
 type LoginRequest struct {
 	Username string `json:"username" binding:"required"` // binding 进行参数校验
@@ -31,6 +50,9 @@ type MyCustomClaims struct {
 }
 
 func main() {
+	// 初始化数据库连接
+	initDB()
+
 	r := gin.Default()
 	// 公共路由（无需登录）
 	public := r.Group("/api") // group传入的是前缀 可以重复
@@ -45,6 +67,20 @@ func main() {
 	}
 	fmt.Println("服务运行在8080端口...")
 	r.Run(":8080") // 监听本地所有IP 冒号:不能省略
+}
+
+// 初始化 GORM MySQL 连接
+func initDB() {
+	// DSN 格式: root:密码@tcp(宿主机IP:端口)/数据库名?charset&parseTime&loc
+	// parseTime=True MySQL 驱动自动把 DATETIME 转成 time.Time
+	// loc 决定根据什么时区解析时间字符串
+	dsn := `root:rootpassword@tcp(127.0.0.1:3306)/user_db?charset=utf8mb4&parseTime=True&loc=Local`
+	var err error
+	db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	if err != nil {
+		logger.Fatal("数据库连接失败", zap.Error(err))
+	}
+	logger.Info("数据库连接成功！")
 }
 
 // 统一返回的响应体
@@ -85,20 +121,34 @@ func loginHandler(c *gin.Context) {
 		ErrorResponse(c, http.StatusBadRequest, "参数解析失败"+err.Error())
 		return
 	}
-	// 模拟数据库验证
-	if req.Username == "admin" && req.Password == "123456" {
-		// 生成 Token
-		token, err := generateToken("111", req.Username)
-		if err != nil {
-			ErrorResponse(c, http.StatusInternalServerError, "Token 生成失败")
-			return
+	// 根据用户名从数据库查询用户
+	var user User
+	result := db.Where("username = ?", req.Username).First(&user)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			ErrorResponse(c, http.StatusUnauthorized, "用户名或密码错误")
+		} else {
+			ErrorResponse(c, http.StatusInternalServerError, "数据库查询异常")
 		}
-		SuccessResponse(c, gin.H{
-			"token": token,
-		})
-	} else {
-		ErrorResponse(c, http.StatusUnauthorized, "用户名或密码错误")
+		return
 	}
+	// 校验密码（利用 bcrypt 比较密文与请求传入的明文）
+	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
+	if err != nil {
+		ErrorResponse(c, http.StatusUnauthorized, "用户名或密码错误")
+		return
+	}
+
+	// 生成 Token
+	// strconv.FormatUint 将Uint也就是数据库中bigint转换为10进制数字字符串
+	token, err := generateToken(strconv.FormatUint(uint64(user.ID), 10), req.Username)
+	if err != nil {
+		ErrorResponse(c, http.StatusInternalServerError, "Token 生成失败")
+		return
+	}
+	SuccessResponse(c, gin.H{
+		"token": token,
+	})
 }
 
 // 生成 Token
