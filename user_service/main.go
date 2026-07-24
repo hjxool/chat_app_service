@@ -202,7 +202,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			}
 			return jwtSecret, nil
 		})
-		if err != nil || token.Valid {
+		if err != nil || !token.Valid {
 			ErrorResponse(c, http.StatusUnauthorized, "Token 已失效或过期")
 			c.Abort()
 			return
