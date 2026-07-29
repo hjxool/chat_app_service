@@ -18,7 +18,7 @@ services:
       # 把一个 命名卷（mysql_data）挂载到容器里的 /var/lib/mysql 目录
       - mysql_user_data:/var/lib/mysql
       # 把本地的 init.sql 文件挂载到容器内部的指定目录 容器启动时会自动执行 /docker-entrypoint-initdb.d/ 目录下的所有 .sql 或 .sh 文件
-      # - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
   redis:
     # alpine 轻量版镜像 Docker Hub 的 Redis 页面可以查看所有 tag
     image: redis:7.0-alpine

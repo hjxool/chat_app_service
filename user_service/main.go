@@ -50,6 +50,8 @@ type MyCustomClaims struct {
 }
 
 func main() {
+	// 初始化日志系统
+	logger.Init()
 	// 初始化数据库连接
 	initDB()
 
