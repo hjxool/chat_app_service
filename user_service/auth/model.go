@@ -22,6 +22,12 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
+// RegisterRequest 注册请求参数结构体
+type RegisterRequest struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
 // MyCustomClaims JWT 自定义声明
 type MyCustomClaims struct {
 	UserID   string `json:"user_id"`

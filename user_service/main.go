@@ -21,6 +21,7 @@ func main() {
 	// 公共路由（无需登录）
 	public := r.Group("/api") // group传入的是前缀 可以重复
 	{                         // 局部作用域块 这里是为了提升代码可读性
+		public.POST("/register", auth.RegisterHandler)
 		public.POST("/login", auth.LoginHandler)
 	}
 
