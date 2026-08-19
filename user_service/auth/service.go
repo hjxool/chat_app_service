@@ -1,9 +1,13 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"strconv"
+	"time"
+	"user_service/logger"
 
+	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -23,12 +27,13 @@ type AuthService interface {
 
 type authService struct {
 	// ⚠️ 这里使用依赖倒置原则 不绑定固定的结构体 而是绑定抽象接口 以方便随时替换结构体
-	repo UserRepository
+	repo      UserRepository
+	tokenRepo TokenRepository
 }
 
 // NewAuthService 创建 AuthService 实例
-func NewAuthService(repo UserRepository) AuthService {
-	return &authService{repo: repo}
+func NewAuthService(repo UserRepository, tokenRepo TokenRepository) AuthService {
+	return &authService{repo: repo, tokenRepo: tokenRepo}
 }
 
 func (s *authService) Login(req *LoginRequest) (string, error) {
@@ -45,10 +50,16 @@ func (s *authService) Login(req *LoginRequest) (string, error) {
 		return "", ErrPasswordIncorrect
 	}
 
+	// strconv 用于将基本数据类型与string相互转换 FormatUint 是将无符号整数转换成10进制字符串
+	userIDStr := strconv.FormatUint(user.ID, 10)
 	// 生成 JWT Token
-	token, err := GenerateToken(strconv.FormatUint(user.ID, 10), user.Username)
+	token, err := GenerateToken(userIDStr, user.Username)
 	if err != nil {
 		return "", err
+	}
+	// redis 保存 Token，指定过期时间
+	if err := s.tokenRepo.SetUserToken(context.Background(), userIDStr, token, 2*time.Hour); err != nil {
+		logger.Warn("缓存 Token 失败", zap.Error(err))
 	}
 	return token, nil
 }

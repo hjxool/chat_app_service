@@ -1,6 +1,11 @@
 package auth
 
 import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
@@ -20,7 +25,6 @@ type gormUserRepository struct {
 func NewUserRepository(db *gorm.DB) UserRepository {
 	return &gormUserRepository{db: db}
 }
-
 func (r *gormUserRepository) FindByUsername(username string) (*User, error) {
 	var user User
 	err := r.db.Where("username = ?", username).Take(&user).Error
@@ -29,7 +33,34 @@ func (r *gormUserRepository) FindByUsername(username string) (*User, error) {
 	}
 	return &user, nil
 }
-
 func (r *gormUserRepository) Create(user *User) error {
 	return r.db.Create(user).Error
+}
+
+// Token 缓存操作接口
+type TokenRepository interface {
+	// Redis SDK依赖context 所以必须传入
+	SetUserToken(ctx context.Context, userID string, token string, duration time.Duration) error
+	GetUserToken(ctx context.Context, userID string) (string, error)
+	DeleteUserToken(ctx context.Context, userID string) error
+}
+type redisTokenRepository struct {
+	rdb *redis.Client
+}
+
+func NewRedisTokenRepository(rdb *redis.Client) TokenRepository {
+	return &redisTokenRepository{rdb: rdb}
+}
+func (r *redisTokenRepository) SetUserToken(ctx context.Context, userID string, token string, duration time.Duration) error {
+	key := fmt.Sprintf("token:%s", userID)
+	// 不论是set还是get返回的都是命令对象 封装好了符合Go设计风格的返回结果 直接调用其方法就行
+	return r.rdb.Set(ctx, key, token, duration).Err()
+}
+func (r *redisTokenRepository) GetUserToken(ctx context.Context, userID string) (string, error) {
+	key := fmt.Sprintf("token:%s", userID)
+	return r.rdb.Get(ctx, key).Result()
+}
+func (r *redisTokenRepository) DeleteUserToken(ctx context.Context, userID string) error {
+	key := fmt.Sprintf("token:%s", userID)
+	return r.rdb.Del(ctx, key).Err()
 }

@@ -15,12 +15,15 @@ func main() {
 	logger.Init()
 	// 初始化数据库连接
 	common.InitDB()
+	// 初始化Redis连接
+	common.InitRedis()
 
 	// 分层初始化：Repository -> Service -> Handler
 	// 这样解耦的好处是替换源或者Mock时不需要每次都NewUserRepository...
 	// 可以从任意层创建结构体 实现对应的接口 将其传入即可使用
 	userRepo := auth.NewUserRepository(common.DB)
-	authService := auth.NewAuthService(userRepo)
+	tokenRepo := auth.NewRedisTokenRepository(common.RDB)
+	authService := auth.NewAuthService(userRepo, tokenRepo)
 	authHandler := auth.NewAuthHandler(authService)
 
 	r := gin.Default()

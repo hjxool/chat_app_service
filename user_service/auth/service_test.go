@@ -29,6 +29,21 @@ func (m *mockUserRepository) Create(user *User) error {
 	return nil
 }
 
+type mockTokenRepository struct {
+}
+
+func newMockTokenRepository() *mockTokenRepository {
+	return &mockTokenRepository{}
+}
+
+func (m *mockTokenRepository) Save(token string, userID uint64, expiresAt int64) error {
+	return nil
+}
+
+func (m *mockTokenRepository) FindByToken(token string) (uint64, error) {
+	return 0, nil
+}
+
 func TestAuthService_RegisterAndLogin(t *testing.T) {
 	repo := newMockUserRepository()
 	service := NewAuthService(repo)
