@@ -65,3 +65,19 @@ func (h *AuthHandler) RegisterHandler(c *gin.Context) {
 		"username": user.Username,
 	})
 }
+
+// 登出处理器
+func (h *AuthHandler) LogoutHandler(c *gin.Context) {
+	// 中间件已经将token解码取出字段存入gin.Context
+	userID, exists := c.Get("userID")
+	if !exists {
+		common.ErrorResponse(c, http.StatusInternalServerError, "登出失败")
+		return
+	}
+	// Logout 要传入string c.Get获取的是any类型 因此要类型断言
+	if err := h.service.Logout(userID.(string)); err != nil {
+		common.ErrorResponse(c, http.StatusInternalServerError, "登出失败")
+		return
+	}
+	common.SuccessResponse[any](c, nil)
+}

@@ -39,7 +39,8 @@ func main() {
 	protected := r.Group("/api")
 	protected.Use(auth.AuthMiddleware())
 	{
-		protected.GET("profile", profile.ProfileHandler)
+		protected.GET("/profile", profile.ProfileHandler)
+		protected.POST("/logout", authHandler.LogoutHandler)
 	}
 
 	fmt.Println("服务运行在8080端口...")

@@ -7,6 +7,7 @@ import (
 	"time"
 	"user_service/logger"
 
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -23,8 +24,8 @@ var (
 type AuthService interface {
 	Login(req *LoginRequest) (string, error)
 	Register(req *RegisterRequest) (*User, error)
+	Logout(userID string) error
 }
-
 type authService struct {
 	// ⚠️ 这里使用依赖倒置原则 不绑定固定的结构体 而是绑定抽象接口 以方便随时替换结构体
 	repo      UserRepository
@@ -35,7 +36,6 @@ type authService struct {
 func NewAuthService(repo UserRepository, tokenRepo TokenRepository) AuthService {
 	return &authService{repo: repo, tokenRepo: tokenRepo}
 }
-
 func (s *authService) Login(req *LoginRequest) (string, error) {
 	user, err := s.repo.FindByUsername(req.Username)
 	if err != nil {
@@ -52,6 +52,17 @@ func (s *authService) Login(req *LoginRequest) (string, error) {
 
 	// strconv 用于将基本数据类型与string相互转换 FormatUint 是将无符号整数转换成10进制字符串
 	userIDStr := strconv.FormatUint(user.ID, 10)
+
+	// 先查 Redis，有未过期 Token 直接返回，避免重复生成
+	cachedToken, err := s.tokenRepo.GetUserToken(context.Background(), userIDStr)
+	if err == nil && cachedToken != "" {
+		return cachedToken, nil
+	}
+	// redis.Nil 表示 key 不存在（正常缓存未命中），其他错误降级处理
+	if err != nil && !errors.Is(err, redis.Nil) {
+		logger.Warn("读取缓存 Token 失败，降级处理", zap.Error(err))
+	}
+
 	// 生成 JWT Token
 	token, err := GenerateToken(userIDStr, user.Username)
 	if err != nil {
@@ -63,7 +74,6 @@ func (s *authService) Login(req *LoginRequest) (string, error) {
 	}
 	return token, nil
 }
-
 func (s *authService) Register(req *RegisterRequest) (*User, error) {
 	existingUser, err := s.repo.FindByUsername(req.Username)
 	if err == nil && existingUser != nil {
@@ -88,4 +98,8 @@ func (s *authService) Register(req *RegisterRequest) (*User, error) {
 	}
 
 	return newUser, nil
+}
+func (s *authService) Logout(userID string) error {
+	// 登出删除 Redis 中的 Token
+	return s.tokenRepo.DeleteUserToken(context.Background(), userID)
 }
