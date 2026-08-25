@@ -128,7 +128,7 @@ func (s *authService) SendVerifyCode(ctx context.Context, req *SendCodeRequest) 
 	}
 	// 发送前先存 Redis，TTL = 5分钟
 	if err = s.codeRepo.SetCode(ctx, req.Target, code, 5*time.Minute); err != nil {
-		return nil
+		return err
 	}
 	// 根据类型路由到对应发送逻辑
 	switch req.Type {
