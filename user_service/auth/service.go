@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"strconv"
 	"time"
+	"user_service/common"
 	"user_service/logger"
 
 	"github.com/redis/go-redis/v9"
@@ -132,9 +133,9 @@ func (s *authService) SendVerifyCode(ctx context.Context, req *SendCodeRequest) 
 	// 根据类型路由到对应发送逻辑
 	switch req.Type {
 	case "sms":
-		return nil
+		return common.SendSMS(req.Target, code)
 	case "email":
-		return nil
+		return common.SendEmail(req.Target, code)
 	default:
 		return errors.New("不支持的发送类型")
 	}

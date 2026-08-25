@@ -13,7 +13,7 @@ import (
 )
 
 // 邮箱发送验证码
-func sendEmail(to string, code string) error {
+func SendEmail(to string, code string) error {
 	from := os.Getenv("SMTP_FROM")
 	password := os.Getenv("SMTP_PASSWORD")
 	// 邮件服务器域名 邮箱提供商决定
@@ -32,7 +32,7 @@ func sendEmail(to string, code string) error {
 }
 
 // 短信发送验证码
-func sendSMS(phone string, code string) error {
+func SendSMS(phone string, code string) error {
 	// 配置客户端
 	config := &openapi.Config{
 		AccessKeyId:     tea.String(os.Getenv("ALIYUN_AK_ID")),
