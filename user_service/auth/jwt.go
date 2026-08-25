@@ -13,7 +13,7 @@ import (
 
 var jwtSecret = []byte("go_secret_key")
 
-// GenerateToken 生成 Token
+// 生成 Token
 func GenerateToken(userID string, username string) (string, error) {
 	// MyCustomClaims因为匿名嵌入结构体 因此隐式实现了Claims接口 传值类型或者指针都行
 	// 但NewWithClaims只是读取 因此不用取地址
@@ -32,7 +32,7 @@ func GenerateToken(userID string, username string) (string, error) {
 	return token.SignedString(jwtSecret)
 }
 
-// AuthMiddleware JWT 认证中间件
+// JWT 认证中间件
 func AuthMiddleware() gin.HandlerFunc {
 	// 闭包形式方便后续改为传参
 	return func(c *gin.Context) {

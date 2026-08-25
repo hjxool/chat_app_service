@@ -28,6 +28,21 @@ services:
     # 这是挂载声明
     volumes:
       - redis_data:/data
+  user_service:
+    build:
+      context: ./user_service
+      dockerfile: Dockerfile
+    container_name: user_service
+    # 真正执行端口映射与转发
+    ports:
+      - "8080:8080"
+    # 启动/停止顺序 和 依赖拉起
+    depends_on:
+      - mysql-user
+      - redis
+    # 容器启动时自动读取本地 .env 注入环境变量 代码中通过 os.Getenv 获取
+    env_file:
+      - .env
 
 # 这是全局卷定义
 volumes:

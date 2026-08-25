@@ -6,7 +6,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// User 数据库实体模型
+// 数据库实体模型
 type User struct {
 	// 数据库里 BIGINT 对应go中的int64 而叠加 UNSIGNED 无符号则变成 uint64 无符号整数类型
 	ID        uint64    `gorm:"primaryKey" json:"id"`
@@ -16,19 +16,19 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// LoginRequest 登录请求参数结构体
+// 登录请求参数结构体
 type LoginRequest struct {
 	Username string `json:"username" binding:"required"` // binding 进行参数校验
 	Password string `json:"password" binding:"required"`
 }
 
-// RegisterRequest 注册请求参数结构体
+// 注册请求参数结构体
 type RegisterRequest struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
 
-// MyCustomClaims JWT 自定义声明
+// JWT 自定义声明
 type MyCustomClaims struct {
 	UserID   string `json:"user_id"`
 	Username string `json:"username"`
@@ -40,4 +40,17 @@ type MyCustomClaims struct {
 	// ⚠️同时因为匿名嵌入结构体内的方法也提升到外层 因此也就继承了interface所需的方法
 	// 因此满足 jwt.Claims 接口
 	jwt.RegisteredClaims
+}
+
+// 发送验证码请求
+type SendCodeRequest struct {
+	// 手机号或邮箱，二选一传入
+	Target string `json:"target" binding:"required"`
+	Type   string `json:"type" binding:"required,oneof=sms email"`
+}
+
+// 验验证码请求
+type VerifyCodeRequest struct {
+	Target string `json:"target" binding:"required"`
+	Code   string `json:"code" binding:"required,len=6"`
 }

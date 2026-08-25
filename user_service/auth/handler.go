@@ -8,17 +8,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AuthHandler 认证路由处理器结构体
+// 认证路由处理器结构体
 type AuthHandler struct {
 	service AuthService
 }
 
-// NewAuthHandler 创建 AuthHandler 实例
+// 创建 AuthHandler 实例
 func NewAuthHandler(service AuthService) *AuthHandler {
 	return &AuthHandler{service: service}
 }
 
-// LoginHandler 登录处理器
+// 登录处理器
 func (h *AuthHandler) LoginHandler(c *gin.Context) {
 	var req LoginRequest
 	// Gin 的 ShouldBindJSON 会按照 binding 声明校验 JSON，如果不合法直接报错
@@ -27,7 +27,7 @@ func (h *AuthHandler) LoginHandler(c *gin.Context) {
 		return
 	}
 
-	token, err := h.service.Login(&req)
+	token, err := h.service.Login(c.Request.Context(), &req)
 	if err != nil {
 		if errors.Is(err, ErrUserNotFound) || errors.Is(err, ErrPasswordIncorrect) {
 			common.ErrorResponse(c, http.StatusUnauthorized, err.Error())
@@ -42,7 +42,7 @@ func (h *AuthHandler) LoginHandler(c *gin.Context) {
 	})
 }
 
-// RegisterHandler 注册处理器
+// 注册处理器
 func (h *AuthHandler) RegisterHandler(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -75,8 +75,34 @@ func (h *AuthHandler) LogoutHandler(c *gin.Context) {
 		return
 	}
 	// Logout 要传入string c.Get获取的是any类型 因此要类型断言
-	if err := h.service.Logout(userID.(string)); err != nil {
+	if err := h.service.Logout(c.Request.Context(), userID.(string)); err != nil {
 		common.ErrorResponse(c, http.StatusInternalServerError, "登出失败")
+		return
+	}
+	common.SuccessResponse[any](c, nil)
+}
+
+// 验证码处理器
+func (h *AuthHandler) SendCodeHandler(c *gin.Context) {
+	var req SendCodeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		common.ErrorResponse(c, http.StatusBadRequest, "参数解析失败: "+err.Error())
+		return
+	}
+	if err := h.service.SendVerifyCode(c.Request.Context(), &req); err != nil {
+		common.ErrorResponse(c, http.StatusInternalServerError, "发送失败: "+err.Error())
+		return
+	}
+	common.SuccessResponse[any](c, nil)
+}
+func (h *AuthHandler) VerifyCodeHandler(c *gin.Context) {
+	var req VerifyCodeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		common.ErrorResponse(c, http.StatusBadRequest, "参数解析失败: "+err.Error())
+		return
+	}
+	if err := h.service.VerifyCode(c.Request.Context(), &req); err != nil {
+		common.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 	common.SuccessResponse[any](c, nil)

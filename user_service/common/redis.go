@@ -20,7 +20,8 @@ func InitRedis() {
 	})
 
 	// 检测连接
-	// 传入context是为了方便链路追踪
+	// 传入context是为了方便链路追踪 此时还没有请求所以只能用永不取消、永不超时的context.Background()
+	// 其实go 1.21+版本后推荐用 asyncCtx := context.WithoutCancel(ctx) 代替
 	if err := RDB.Ping(context.Background()).Err(); err != nil {
 		logger.Fatal("Redis 连接失败", zap.Error(err))
 	}

@@ -20,7 +20,7 @@ type gormUserRepository struct {
 	db *gorm.DB
 }
 
-// NewUserRepository 创建 UserRepository 实例 后续任何实现该接口的结构体都可以替换掉gormUserRepository
+// 创建 UserRepository 实例 后续任何实现该接口的结构体都可以替换掉gormUserRepository
 // 因为结构体才是具体实现也就是插头 而接口是插座
 func NewUserRepository(db *gorm.DB) UserRepository {
 	return &gormUserRepository{db: db}
@@ -62,5 +62,31 @@ func (r *redisTokenRepository) GetUserToken(ctx context.Context, userID string) 
 }
 func (r *redisTokenRepository) DeleteUserToken(ctx context.Context, userID string) error {
 	key := fmt.Sprintf("token:%s", userID)
+	return r.rdb.Del(ctx, key).Err()
+}
+
+// 证码缓存操作接口
+type CodeRepository interface {
+	SetCode(ctx context.Context, target string, code string, duration time.Duration) error
+	GetCode(ctx context.Context, target string) (string, error)
+	DeleteCode(ctx context.Context, target string) error
+}
+type redisCodeRepository struct {
+	rdb *redis.Client
+}
+
+func NewRedisCodeRepository(rdb *redis.Client) CodeRepository {
+	return &redisCodeRepository{rdb: rdb}
+}
+func (r *redisCodeRepository) SetCode(ctx context.Context, target string, code string, duration time.Duration) error {
+	key := fmt.Sprintf("code:%s", target)
+	return r.rdb.Set(ctx, key, code, duration).Err()
+}
+func (r *redisCodeRepository) GetCode(ctx context.Context, target string) (string, error) {
+	key := fmt.Sprintf("code:%s", target)
+	return r.rdb.Get(ctx, key).Result()
+}
+func (r *redisCodeRepository) DeleteCode(ctx context.Context, target string) error {
+	key := fmt.Sprintf("code:%s", target)
 	return r.rdb.Del(ctx, key).Err()
 }

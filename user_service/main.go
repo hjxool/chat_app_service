@@ -8,6 +8,7 @@ import (
 	"user_service/profile"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func main() {
@@ -17,6 +18,8 @@ func main() {
 	common.InitDB()
 	// 初始化Redis连接
 	common.InitRedis()
+	// 临时 加载本地文件获取环境配置
+	godotenv.Load("../.env")
 
 	// 分层初始化：Repository -> Service -> Handler
 	// 这样解耦的好处是替换源或者Mock时不需要每次都NewUserRepository...
