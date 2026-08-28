@@ -41,7 +41,6 @@ type AuthService interface {
 	Register(ctx context.Context, req *RegisterRequest) (*User, error)
 	Logout(ctx context.Context, userID string) error
 	SendVerifyCode(ctx context.Context, req *SendCodeRequest) error
-	VerifyCode(ctx context.Context, req *VerifyCodeRequest) error
 }
 type authService struct {
 	// ⚠️ 这里使用依赖倒置原则 不绑定固定的结构体 而是绑定抽象接口 以方便随时替换结构体
@@ -116,6 +115,7 @@ func (s *authService) Register(ctx context.Context, req *RegisterRequest) (*User
 		Username: req.Username,
 		Password: string(hashedPassword),
 	}
+	// ⚠️ 虽然newUser没有ID字段 但是gorm会自动添加该字段 所以外层调用Register返回的user能获取ID
 	if err := s.repo.Create(newUser); err != nil {
 		return nil, err
 	}
@@ -146,18 +146,4 @@ func (s *authService) SendVerifyCode(ctx context.Context, req *SendCodeRequest) 
 		return errors.New("不支持的发送类型")
 	}
 }
-func (s *authService) VerifyCode(ctx context.Context, req *VerifyCodeRequest) error {
-	stored, err := s.codeRepo.GetCode(ctx, req.Target)
-	if errors.Is(err, redis.Nil) {
-		return errors.New("验证码已过期")
-	}
-	if err != nil {
-		return err
-	}
-	if stored != req.Code {
-		return errors.New("验证码错误")
-	}
-	// 验证成功立即删除，防止重放攻击
-	s.codeRepo.DeleteCode(ctx, req.Target)
-	return nil
-}
+

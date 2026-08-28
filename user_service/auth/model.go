@@ -51,8 +51,4 @@ type SendCodeRequest struct {
 	Type   string `json:"type" binding:"required,oneof=sms email"`
 }
 
-// 验验证码请求
-type VerifyCodeRequest struct {
-	Target string `json:"target" binding:"required"`
-	Code   string `json:"code" binding:"required,len=6"`
-}
+

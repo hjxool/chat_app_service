@@ -95,15 +95,4 @@ func (h *AuthHandler) SendCodeHandler(c *gin.Context) {
 	}
 	common.SuccessResponse[any](c, nil)
 }
-func (h *AuthHandler) VerifyCodeHandler(c *gin.Context) {
-	var req VerifyCodeRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		common.ErrorResponse(c, http.StatusBadRequest, "参数解析失败: "+err.Error())
-		return
-	}
-	if err := h.service.VerifyCode(c.Request.Context(), &req); err != nil {
-		common.ErrorResponse(c, http.StatusBadRequest, err.Error())
-		return
-	}
-	common.SuccessResponse[any](c, nil)
-}
+

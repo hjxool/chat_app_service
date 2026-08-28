@@ -37,7 +37,6 @@ func main() {
 		public.POST("/register", authHandler.RegisterHandler)
 		public.POST("/login", authHandler.LoginHandler)
 		public.POST("/sendCode", authHandler.SendCodeHandler)
-		public.POST("/verifyCode", authHandler.VerifyCodeHandler)
 	}
 
 	// 受保护路由（挂载 JWT 中间件）
