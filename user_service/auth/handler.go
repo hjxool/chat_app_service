@@ -50,7 +50,7 @@ func (h *AuthHandler) RegisterHandler(c *gin.Context) {
 		return
 	}
 
-	user, err := h.service.Register(&req)
+	user, err := h.service.Register(c.Request.Context(), &req)
 	if err != nil {
 		if errors.Is(err, ErrUserAlreadyExists) {
 			common.ErrorResponse(c, http.StatusBadRequest, err.Error())

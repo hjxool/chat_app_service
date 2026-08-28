@@ -26,6 +26,8 @@ type LoginRequest struct {
 type RegisterRequest struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
+	Target   string `json:"target" binding:"required"`
+	Code     string `json:"code" binding:"required,len=6"`
 }
 
 // JWT 自定义声明

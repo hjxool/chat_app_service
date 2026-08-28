@@ -38,7 +38,7 @@ func generateCode() (string, error) {
 // AuthService 认证业务逻辑接口
 type AuthService interface {
 	Login(ctx context.Context, req *LoginRequest) (string, error)
-	Register(req *RegisterRequest) (*User, error)
+	Register(ctx context.Context, req *RegisterRequest) (*User, error)
 	Logout(ctx context.Context, userID string) error
 	SendVerifyCode(ctx context.Context, req *SendCodeRequest) error
 	VerifyCode(ctx context.Context, req *VerifyCodeRequest) error
@@ -92,29 +92,35 @@ func (s *authService) Login(ctx context.Context, req *LoginRequest) (string, err
 	}
 	return token, nil
 }
-func (s *authService) Register(req *RegisterRequest) (*User, error) {
+func (s *authService) Register(ctx context.Context, req *RegisterRequest) (*User, error) {
+	// 先验证码
+	stored, err := s.codeRepo.GetCode(ctx, req.Target)
+	if errors.Is(err, redis.Nil) {
+		return nil, errors.New("验证码已过期")
+	}
+	if stored != req.Code {
+		return nil, errors.New("验证码错误")
+	}
 	existingUser, err := s.repo.FindByUsername(req.Username)
 	if err == nil && existingUser != nil {
 		return nil, ErrUserAlreadyExists
 	} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
-
 	// 对密码进行 bcrypt 哈希加密
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
-
 	newUser := &User{
 		Username: req.Username,
 		Password: string(hashedPassword),
 	}
-
 	if err := s.repo.Create(newUser); err != nil {
 		return nil, err
 	}
-
+	// 删除验证码
+	s.codeRepo.DeleteCode(ctx, req.Target)
 	return newUser, nil
 }
 func (s *authService) Logout(ctx context.Context, userID string) error {

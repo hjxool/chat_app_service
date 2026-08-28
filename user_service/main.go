@@ -36,6 +36,8 @@ func main() {
 	{                         // 局部作用域块 这里是为了提升代码可读性
 		public.POST("/register", authHandler.RegisterHandler)
 		public.POST("/login", authHandler.LoginHandler)
+		public.POST("/sendCode", authHandler.SendCodeHandler)
+		public.POST("/verifyCode", authHandler.VerifyCodeHandler)
 	}
 
 	// 受保护路由（挂载 JWT 中间件）
