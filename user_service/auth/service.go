@@ -115,7 +115,7 @@ func (s *authService) Register(ctx context.Context, req *RegisterRequest) (*User
 		Username: req.Username,
 		Password: string(hashedPassword),
 	}
-	// ⚠️ 虽然newUser没有ID字段 但是gorm会自动添加该字段 所以外层调用Register返回的user能获取ID
+	// ⚠️ 因为User中定义了 json:"..." 所以会自动添加该字段 json:"-" 则会忽略该字段
 	if err := s.repo.Create(newUser); err != nil {
 		return nil, err
 	}
@@ -146,4 +146,3 @@ func (s *authService) SendVerifyCode(ctx context.Context, req *SendCodeRequest) 
 		return errors.New("不支持的发送类型")
 	}
 }
-
