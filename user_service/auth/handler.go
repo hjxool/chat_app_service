@@ -52,7 +52,7 @@ func (h *AuthHandler) RegisterHandler(c *gin.Context) {
 
 	user, err := h.service.Register(c.Request.Context(), &req)
 	if err != nil {
-		if errors.Is(err, ErrUserAlreadyExists) {
+		if errors.Is(err, ErrUserAlreadyExists) || errors.Is(err, ErrTargetAlreadyExists) {
 			common.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		} else {
 			common.ErrorResponse(c, http.StatusInternalServerError, "用户注册失败")
@@ -61,7 +61,7 @@ func (h *AuthHandler) RegisterHandler(c *gin.Context) {
 	}
 
 	common.SuccessResponse(c, gin.H{
-		"id":       user.ID,
+		"userId":   user.ID,
 		"username": user.Username,
 	})
 }
@@ -95,4 +95,3 @@ func (h *AuthHandler) SendCodeHandler(c *gin.Context) {
 	}
 	common.SuccessResponse[any](c, nil)
 }
-

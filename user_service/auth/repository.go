@@ -12,6 +12,7 @@ import (
 // UserRepository 用户数据访问接口
 type UserRepository interface {
 	FindByUsername(username string) (*User, error)
+	FindByAccount(account string) (*User, error)
 	Create(user *User) error
 }
 
@@ -35,6 +36,14 @@ func (r *gormUserRepository) FindByUsername(username string) (*User, error) {
 }
 func (r *gormUserRepository) Create(user *User) error {
 	return r.db.Create(user).Error
+}
+func (r *gormUserRepository) FindByAccount(account string) (*User, error) {
+	var user User
+	err := r.db.Where("username = ? OR email = ? OR phone = ?", account, account, account).Take(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
 // Token 缓存操作接口

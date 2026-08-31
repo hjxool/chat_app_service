@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
+	"strings"
 	"time"
 	"user_service/common"
 	"user_service/logger"
@@ -19,9 +20,10 @@ import (
 
 // go中枚举基本就是这么写的
 var (
-	ErrUserNotFound      = errors.New("用户名或密码错误")
-	ErrPasswordIncorrect = errors.New("用户名或密码错误")
-	ErrUserAlreadyExists = errors.New("用户名已存在")
+	ErrUserNotFound        = errors.New("用户名或密码错误")
+	ErrPasswordIncorrect   = errors.New("用户名或密码错误")
+	ErrUserAlreadyExists   = errors.New("用户名已存在")
+	ErrTargetAlreadyExists = errors.New("该邮箱或手机号已被注册")
 )
 
 // 生成6位数字验证码
@@ -54,7 +56,8 @@ func NewAuthService(repo UserRepository, tokenRepo TokenRepository) AuthService 
 	return &authService{repo: repo, tokenRepo: tokenRepo}
 }
 func (s *authService) Login(ctx context.Context, req *LoginRequest) (string, error) {
-	user, err := s.repo.FindByUsername(req.Username)
+	// 使用 FindByAccount，支持输入 用户名 / 邮箱 / 手机号 任一种登录
+	user, err := s.repo.FindByAccount(req.Username)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return "", ErrUserNotFound
@@ -106,14 +109,31 @@ func (s *authService) Register(ctx context.Context, req *RegisterRequest) (*User
 	} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
+	// 查重：邮箱或手机号是否已被注册
+	existingTarget, err := s.repo.FindByAccount(req.Target)
+	if err == nil && existingTarget != nil {
+		// 存在用户 且 没有报错
+		return nil, ErrTargetAlreadyExists
+	} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		// 有报错 且 错误不是未找到记录
+		return nil, err
+	}
+	// 数据库查不到 GORM 会返回 gorm.ErrRecordNotFound 错误
 	// 对密码进行 bcrypt 哈希加密
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
+	// 这里只是给特定字段赋值 其他字段是空值而已
 	newUser := &User{
 		Username: req.Username,
 		Password: string(hashedPassword),
+	}
+	// 区分邮箱或手机号存入对应字段
+	if strings.Contains(req.Target, "@") {
+		newUser.Email = &req.Target
+	} else {
+		newUser.Phone = &req.Target
 	}
 	// ⚠️ 因为User中定义了 json:"..." 所以会自动添加该字段 json:"-" 则会忽略该字段
 	if err := s.repo.Create(newUser); err != nil {

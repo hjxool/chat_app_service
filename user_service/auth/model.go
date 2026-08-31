@@ -9,8 +9,11 @@ import (
 // 数据库实体模型
 type User struct {
 	// 数据库里 BIGINT 对应go中的int64 而叠加 UNSIGNED 无符号则变成 uint64 无符号整数类型
-	ID        uint64    `gorm:"primaryKey" json:"id"`
-	Username  string    `gorm:"uniqueIndex;type:varchar(64);not null" json:"username"`
+	ID       uint64 `gorm:"primaryKey" json:"userId"`
+	Username string `gorm:"uniqueIndex;type:varchar(64);not null" json:"username"`
+	// Email在MySQL中是NULL 而go中指针的空值是nil 如果用string 那么它的空值是'' 会与数据库中的 UNIQUE 冲突
+	Email     *string   `gorm:"uniqueIndex;type:varchar(128)" json:"email"`
+	Phone     *string   `gorm:"uniqueIndex;varchar(20)" json:"phone"`
 	Password  string    `gorm:"type:varchar(255);not null" json:"-"` // 密码 json 输出时忽略
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -32,7 +35,7 @@ type RegisterRequest struct {
 
 // JWT 自定义声明
 type MyCustomClaims struct {
-	UserID   string `json:"user_id"`
+	UserID   string `json:"userId"`
 	Username string `json:"username"`
 	// 没有显式字段名的结构体 内部的字段和方法会被平铺到外层
 	// 如MyCustomClaims实例就可以直接a.c取值 不用a.b.c
@@ -50,5 +53,3 @@ type SendCodeRequest struct {
 	Target string `json:"target" binding:"required"`
 	Type   string `json:"type" binding:"required,oneof=sms email"`
 }
-
-
